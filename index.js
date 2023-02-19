@@ -15,7 +15,6 @@ app.get("/:address", async (req, res) => {
   let Advertiser;
   let requiredFunds;
   let address = req.params.address;
-  console.log(address);
   let query = `{
   publishers(
     where: {Publisher: "${address}"}
@@ -28,23 +27,26 @@ app.get("/:address", async (req, res) => {
   try {
     const response = await axios.post(SUBGRAPH, { query });
     const publishers = response.data?.data?.publishers;
+    console.log(publishers);
     if (!publishers || publishers.length === 0) {
       throw new Error("No publishers found for this address");
     }
     const length = publishers[0].Advertisers.length;
     let x = Math.floor(Math.random() * length);
-    AdId = x + 1;
+    AdId = publishers[0].Advertisers[x];
+    console.log(AdId);
     requiredFunds = publishers[0].ClickReward + publishers[0].ViewReward;
   } catch (error) {
     console.log("Error retrieving publishers", error);
   }
-  query = `{ads(first: 5 where:{AdId:"${AdId}",CurrentFunds_gte:"${requiredFunds}" }) {
+  query = `{ads(first: 5 where:{AdId:"${AdId}"}) {
     AdData
     Advertiser
   }}`;
   try {
     const response = await axios.post(SUBGRAPH, { query });
     const ads = response.data?.data?.ads;
+    console.log(ads);
     if (!ads || ads.length === 0) {
       throw new Error("No ads found for this address");
     }
@@ -126,9 +128,10 @@ app.get("/clicks/:address/:AdId", async (req, res) => {
     tx.wait().then(async (receipt) => {
       console.log("done");
       let query = `{
-    ads(first: 5 where:{AdId:"${AdId}"}) {
+  ads(first: 5 where:{AdId:"${AdId}"}) {
     AdData
-  }}`;
+  }
+}`;
       try {
         const response = await axios.post(SUBGRAPH, { query });
         const ads = response.data?.data?.ads;
@@ -136,8 +139,8 @@ app.get("/clicks/:address/:AdId", async (req, res) => {
           throw new Error("No ads found for this address");
         }
         AdLink = ads[0].AdData;
-        console.log(AdLink);
-        res.redirect(AdLink);
+        console.log(AdLink.TargetUrl);
+        res.redirect(AdLink.TargetUrl);
       } catch (error) {
         res.send("No ads found for this address");
         return;
